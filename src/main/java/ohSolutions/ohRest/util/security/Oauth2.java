@@ -1,0 +1,401 @@
+package ohSolutions.ohRest.util.security;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import com.google.gson.Gson;
+
+import ohSolutions.ohJpo.dao.Jpo;
+import ohSolutions.ohJpo.dao.JpoUtil;
+import ohSolutions.ohJpo.dao.Tabla;
+
+public class Oauth2 {
+	
+	final static Logger logger = LogManager.getLogger(Oauth2.class);
+	
+	public static String sc_error_notFoundToken = "001_ohRest"; // Oauth2 Do not found token
+	public static String sc_error_notRolEnable = "002_ohRest"; // Oauth2 Do not match with the roles access
+	
+	private Jpo ppo;
+	private boolean onFinalize = true;
+	private String jpoType; // SQLSERVER - POSTGRESQL
+	
+	public Oauth2(String source, String propertiesFile) throws Exception {
+		this.ppo = new Jpo(source, propertiesFile);
+		this.jpoType = JpoUtil.getPropertie(null, "jpo."+source+".type");
+	}
+	
+	public Oauth2(String source, String propertiesFile, Jpo jpo) throws Exception {
+		this.ppo = new Jpo(source, propertiesFile);
+		if(this.ppo.hashConection == jpo.hashConection) {
+			this.ppo = jpo;
+			this.onFinalize = false;
+		}
+		this.jpoType = JpoUtil.getPropertie(null, "jpo."+source+".type");
+	}
+	
+	// For login - Input : oauthConfig, user, roles[] | output Dinamic Token
+	public String createToken(Map<String, String> oauthConfig, String user, Collection<String> roles) throws Exception {
+		
+		/*
+			{
+		      "clientId": "API_APM_INLANDNET",
+		      "clientSecret": "33caa750333af31d49d39e9251ecb592",
+		      "latitude": "",
+		      "longitude": "",
+		      "so": "Windows NT 4.0",
+		      "browser": "Chrome 77.0.3865.120"
+		      "ip_address" : "1.1.1.1"
+		    }
+		    user : user@company.com
+		*/
+		
+		String clientId = oauthConfig.get("clientId");
+		String clientSecret = oauthConfig.get("clientSecret");
+		user = user.trim();
+		
+		// Validating relevant informacion
+		if(roles.size()==0) {
+			throw new Exception("ohRest Oauth2 Do not fount any roles");
+		}
+		
+		Map<String, Object> client = loginClient(clientId, clientSecret);
+		
+		if(client == null){
+			throw new Exception("ohRest Oauth2 Do not fount client detail");
+		} 
+
+		String autenticationId = MD5Util.MD5(clientId+"-"+user); // static token
+		
+		String tokenId = MD5Util.MD5(clientId+"-"+user+"-"+System.currentTimeMillis()); // dinamic token
+		
+		/*
+		 * contentToken = {
+		 *  roles : ["ROL_A", "ROL_B"],
+		 *  logins : [
+		 *   {
+		 *   	ip_address : "",
+		 *    	loginDate : date,
+		 *    	tokenId : tokenId
+		 *   }, ...
+		 *  ]
+		 * }
+		 * */
+		String contentToken = "";
+		
+		// 1.- Check if 'oauth_access_token' exist a row with authentication_id
+		Map<String, Object> dToken = getToken("authentication_id", autenticationId);
+		
+		Gson TEST = new Gson();
+		//System.out.println(TEST.toJson(dToken));
+		
+		// 2.- If not exist token create the object 'contentToken' and put the roles and the login date
+		boolean existAutenticationId;
+		
+		if(dToken == null || dToken.size()==0) {
+			
+			JSONObject infoToken = new JSONObject();
+			
+			infoToken.put("roles", roles);
+			
+			List<JSONObject> logins = new ArrayList<JSONObject>();
+			
+			logins.add(getDataLogin(tokenId, oauthConfig.get("ip_address")));
+			
+			infoToken.put("logins", logins);
+			
+			contentToken = infoToken.toString();
+			
+			existAutenticationId = false;
+			
+		// 3.- If no, load the object token 'contentToken' and replace the roles and add or change the login date
+		} else {
+			
+			//System.out.println(dToken.get("token"));
+			
+			JSONObject infoToken = new JSONObject(""+dToken.get("token"));
+
+			infoToken.put("roles", roles);
+			
+			JSONArray logins = infoToken.getJSONArray("logins");
+			
+			boolean hasToken = false;
+			
+			for (int i = 0; i < logins.length(); i++) {
+				JSONObject login = logins.getJSONObject(i);
+				if(login.has("tokenId") && login.get("tokenId").equals(oauthConfig.get("tokenId"))) {
+					hasToken = true;
+					login.put("loginDate", System.currentTimeMillis());
+					break;
+				}
+			}
+			
+			if(!hasToken) {
+				logins.put(getDataLogin(tokenId, oauthConfig.get("ip_address")));
+				infoToken.put("logins", logins);
+			}
+			
+			contentToken = infoToken.toString();
+
+			existAutenticationId = true;
+			
+		}
+		/*
+		logger.debug("saveToken");
+		logger.debug(existAutenticationId);
+		logger.debug(autenticationId);
+		logger.debug(contentToken);
+		*/
+		// 4.- Saving the token
+		saveToken(existAutenticationId, autenticationId, clientId, user, clientSecret, contentToken);
+		//cleanHistory(autenticationId, oauthConfig.get("ip_address")); pending adding extra informacion to do
+		saveHistory(oauthConfig, autenticationId, tokenId);
+		
+		ppo.commitear();
+		if(this.onFinalize) {
+			ppo.finalizar();
+		}
+		
+		return tokenId;
+
+	}
+	
+		private JSONObject getDataLogin(String tokenId, String ip_address) {
+			JSONObject 	login = new JSONObject();
+			login.put("tokenId", tokenId);
+			login.put("ip_address", ip_address);
+			login.put("loginDate", System.currentTimeMillis());
+			return login;
+		}
+	
+	// For closing or logout
+	public Object closeToken(String dinamicToken, String ipAddress) throws Exception {
+		
+		Map<String, Object> dToken = getTokenByDinamic(dinamicToken);
+		
+		// 1.- Exist token to close
+		if(dToken != null && dToken.size()>0) {
+			
+			// 1.1 Removing ip_address logged in
+			JSONObject infoToken = new JSONObject(""+dToken.get("token"));
+			
+			JSONArray logins = infoToken.getJSONArray("logins");
+			
+			boolean isUpdateToken = false;
+			
+			for (int i = 0; i < logins.length(); i++) {
+				JSONObject login = logins.getJSONObject(i);
+				if(login.has("tokenId") && login.get("tokenId").equals(dinamicToken)) {
+					isUpdateToken = true;
+					logins.remove(i);
+					break;
+				}
+			}
+			infoToken.put("logins", logins);
+			
+			// 1.2. Updating history and token
+			updateHistory(dinamicToken);
+			if(isUpdateToken) {
+				updateToken(""+dToken.get("authentication_id"), infoToken.toString());
+			}
+
+		}
+		
+		ppo.commitear();
+		if(this.onFinalize) {
+			ppo.finalizar();
+		}
+		
+		return true;
+	}
+	
+	// For checking if has token, and fullfill the roles
+	public void checkAccess(String roles, String dinamicToken, String ip_address) throws Exception {
+		Map<String, Object> dToken = getTokenByDinamic(dinamicToken);
+		if(dToken == null || dToken.size()==0) {
+			
+			throw new Exception(sc_error_notFoundToken); // Oauth2 Do not found token
+			
+		} else {
+			
+			if(roles != null) { // Validating with roles
+				// Valid if has the roles to use this method.
+				JSONObject infoToken = new JSONObject(""+dToken.get("token"));
+				if(!checkRoles(infoToken.getJSONArray("roles").toString(), roles.split(","))) {
+					throw new Exception(sc_error_notRolEnable);
+				}
+			}
+			
+		}
+		
+		ppo.commitear();
+		if(this.onFinalize) {
+			ppo.finalizar();
+		}
+	}
+	
+	// For check if has token id just
+	public boolean checkToken(String dinamicToken, String ip_address) throws Exception {
+		
+		Map<String, Object> dToken = getTokenByDinamic(dinamicToken);
+		
+		if(dToken == null || dToken.size()==0) {
+			throw new Exception("ohRest Oauth2 Do not found token");
+		}
+		
+		ppo.commitear();
+		if(this.onFinalize) {
+			ppo.finalizar();
+		}
+		
+		return true;
+		
+	}
+	/*
+	private void cleanHistory(String autenticationId, String ipAddress) throws Exception {
+		
+	    DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+	    Date today = Calendar.getInstance().getTime();      
+		
+		Tabla token = ppo.tabla("oauth_access_history");
+			//token.donde("authentication_id = '"+autenticationId+"' AND ip_address = '"+ipAddress+"' AND logout_date IS NULL");
+  	  		token.donde("authentication_id = '"+autenticationId+"' AND logout_date IS NULL");
+  	  		token.setData("logout_date", df.format(today));
+        	token.editar();
+        	  
+	}
+	 */
+	private void updateToken(String staticToken, String infoToken) throws Exception {
+
+		Tabla token = ppo.tabla("oauth_access_token");
+        	  token.donde("authentication_id = '"+staticToken+"'");
+        	  token.setData("token", setBinary(infoToken));
+        	  token.editar();
+        	
+	}
+	
+	private boolean checkRoles(String rolesInToken, String[] roles) {
+		for(int i = 0; i < roles.length; i++) {
+			if(rolesInToken.contains(roles[i])) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void saveHistory(Map<String, String> oauthConfig, String autenticationId, String tokenId) throws Exception {
+		
+        Tabla history = ppo.tabla("oauth_access_history");
+        
+        history.setData("authentication_id", autenticationId);
+        if(oauthConfig.get("latitude").length()!=0) {
+        	history.setData("latitude", oauthConfig.get("latitude"));
+        }
+        if(oauthConfig.get("longitude").length()!=0) {
+        	history.setData("longitude", oauthConfig.get("longitude"));
+        }
+        history.setData("so", oauthConfig.get("so"));
+        history.setData("browser", oauthConfig.get("browser"));
+        history.setData("ip_address", oauthConfig.get("ip_address"));
+        history.setData("token_id", tokenId);
+        
+        history.registrar();
+       
+	}
+	
+		private String setBinary(String token) {
+	        if(jpoType.equals(Jpo.TYPE_POSTGRESQL)) {
+	        	return "'decode('"+token+"'::text, 'escape')";
+	        }
+	        if(jpoType.equals(Jpo.TYPE_SQLSERVER)) {
+	        	return "'CONVERT(varbinary(MAX), '"+token+"')";
+	        }
+			return null;
+		}
+		
+		private String getBinary(String token) {
+	        if(jpoType.equals(Jpo.TYPE_POSTGRESQL)) {
+	        	return "encode("+token+"::BYTEA, 'escape')";
+	        }
+	        if(jpoType.equals(Jpo.TYPE_SQLSERVER)) {
+	        	return "CONVERT(VARCHAR(MAX), "+token+")";
+	        }
+			return null;
+		}
+	
+	private boolean updateHistory(String dinamicTokenId) throws Exception {
+		
+	    DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+	    Date today = Calendar.getInstance().getTime();      
+		
+        Tabla history = ppo.tabla("oauth_access_history");
+	          history.donde("token_id = '"+dinamicTokenId+"'");
+	          history.setData("logout_date", df.format(today));
+	          history.editar();
+        
+        return true;
+
+	}
+	
+	private void saveToken(boolean existAutenticationId, String authentication_id, String clientId, String user, String clientSecret, String contentToken) throws Exception {
+		
+        Tabla token = ppo.tabla("oauth_access_token");
+        
+        	token.setData("token_id", null);
+        	token.setData("token", setBinary(contentToken));
+	        token.setData("user_name", user);
+	        token.setData("client_id", clientId);
+	        token.setData("authentication", null);
+	        token.setData("refresh_token", null);
+        
+        if(existAutenticationId) {
+        	token.donde("authentication_id = '"+authentication_id+"'");
+        	token.editar();
+        } else {
+        	token.setData("authentication_id", authentication_id);
+        	token.registrar();
+        }
+        
+	}
+	
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getToken(String tokenSearch, String authentication_id) throws Exception {
+		
+        Tabla token = ppo.tabla("oauth_access_token");
+        
+        token.donde(tokenSearch+" = '"+authentication_id+"'");
+        
+        return (Map<String, Object>) token.obtener(this.getBinary("token")+" AS token, authentication_id");
+        
+	}
+	
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getTokenByDinamic(String dinamicTokenId) throws Exception {
+		
+        Tabla token = ppo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
+        token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
+                
+        return (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id");
+        
+	}
+	
+	// Obtain the correct configuration from oauth_client_details
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> loginClient(String clientId, String clientSecret) throws Exception {
+        Tabla client = ppo.tabla("oauth_client_details");
+        client.donde("client_id = '"+clientId+"' AND client_secret = '"+clientSecret+"'");
+        return (Map<String, Object>) client.obtener("access_token_validity");
+	}
+	
+}

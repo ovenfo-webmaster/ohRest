@@ -1,0 +1,123 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ohSolutions</groupId>
+  <artifactId>ohRest</artifactId>
+  <version>2.1.1</version>
+  <packaging>jar</packaging>
+
+  <name>ohRest</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>com.google.code.gson</groupId>
+    	<artifactId>gson</artifactId>
+    	<version>2.8.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>javax</groupId>
+    	<artifactId>javaee-api</artifactId>
+    	<version>8.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>commons-codec</groupId>
+    	<artifactId>commons-codec</artifactId>
+    	<version>1.10</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.apache.logging.log4j</groupId>
+    	<artifactId>log4j-api</artifactId>
+    	<version>2.8.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.apache.logging.log4j</groupId>
+    	<artifactId>log4j-core</artifactId>
+    	<version>2.8.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>ohSolutions</groupId>
+    	<artifactId>ohJpo</artifactId>
+    	<version>2.1.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>javax.ejb</groupId>
+    	<artifactId>javax.ejb-api</artifactId>
+    	<version>3.2.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.sendgrid</groupId>
+    	<artifactId>sendgrid-java</artifactId>
+    	<version>4.3.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>commons-io</groupId>
+    	<artifactId>commons-io</artifactId>
+    	<version>2.6</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.mockito</groupId>
+    	<artifactId>mockito-core</artifactId>
+    	<version>2.8.47</version>
+    </dependency>
+    <dependency>
+    	<groupId>javax.servlet</groupId>
+    	<artifactId>javax.servlet-api</artifactId>
+    	<version>3.0.1</version>
+    </dependency>
+  </dependencies>
+  <description>v1.0.1 - Mejora para leer la anotación JpoClass en una clase persistencia
+v1.0.2 - Se agregó el header jpoNoMappingBody
+v1.0.3 - Se agregó clases utiles, MD5, HASH, soporte Oauth2
+v1.0.4 - Se agregó el formato de fecha en json
+v.1.0.5 - Shared methods between different projects
+v.1.0.6 - Improve compatibilities
+v.1.0.7 - Adding oauth2Enable to validate the oAuth2
+v.1.0.8 - Adding annotations for Methods
+v.1.0.9 - Improving annotations
+v.1.0.10 - Improving annotations
+v.1.1.0 - Adding additionals methods
+v.1.1.1 - Fixed bug from annotations methods
+v.1.1.2 - Fixed sharing jpo ejb
+v.1.1.3 - Adding file to string
+v.1.1.4 - Adding error 401  and 403 when token is not
+v.1.1.5 - Validar que se haga rollback al momento de registrar informacion en BDs
+v.1.1.7 - Se agregó la clase de impresion PrintUtil
+v.1.1.8 - Se agregó el rollback cuando falla el método en InvocationTargetException
+v.1.1.9 - Compatibilidad WAF se quita el caracter &quot;:&quot;
+v.1.2.0 - Corregir error printUtil
+v.1.2.1 - Componente nuevo envio de email
+v.1.2.2 - RestUtil.fileToString Retorna Null cuando no encuentra y mantiene la excepcion
+v.1.2.3 - Oauth2 - cleanHistory ahora cierra a todas las sessiones.
+v.1.2.4 - Agregando log, integrando
+v.1.2.5 - Se agrega la longitud para descargar archivos.
+v.1.2.6 - Se agrega un callback luego del sendgrid.
+v.1.2.7 - Mejora SendGrid enviar multiples correos
+v.1.2.8 - Se agregó la clase FileUtil
+v.1.2.9 - Mejora Obtencion de Ip Adress
+v.1.3.0 - Mejora envio de correos soporte de token sendgrid por proyecto
+v.1.3.2 - Mejora Sendgrid enviar ruta base del propertie
+v.1.3.3 - Mejora adjunto con propertie
+v.2.0.0 - Fix sendgrid luego de enviar correo enviar a BD
+v.2.0.1 - Fix sendgrid envio de correo sendMail
+v.2.0.3 - Fix oauth2 multiple instances and do not go out from application
+v.2.0.4 - Same for Jpo
+v.2.0.5 - Referenciado del jpo 2.0.4
+v.2.0.6 - oauth2 bug for postgresql select binary
+v.2.0.7 - Implementation by only servlet
+v.2.0.8 - Implementation by only servlet test
+v.2.0.9 - Smart Data source conection between oauth and jpo base
+v.2.1.0 - Fixing problems about jpo instance
+v.2.1.1 - Without logs</description>
+</project>
