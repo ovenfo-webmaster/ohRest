@@ -285,16 +285,18 @@ public class MailUtil {
 	    
 	    mail.addPersonalization(personalizations);
 	    
-	    Attachments attachments = new Attachments();
-	    
-	    System.out.println(attachmentimg);
-	    
-	    attachments.setContent(ru.fileToString(attachmentimg));
-	    attachments.setType("image/png");
-	    attachments.setFilename(attachmentname);
-	    attachments.setContentId(attachmentid);
-	    
-	    mail.addAttachments(attachments);
+	    if(attachmentimg != null && attachmentname != null && attachmentid != null) {
+	    	
+		    Attachments attachments = new Attachments();
+		    
+		    attachments.setContent(ru.fileToString(attachmentimg));
+		    attachments.setType("image/png");
+		    attachments.setFilename(attachmentname);
+		    attachments.setContentId(attachmentid);
+		    
+		    mail.addAttachments(attachments);
+		    
+	    }
 	    
 	    SendGrid sg = new SendGrid(apikey);
 	    Request request = new Request();
