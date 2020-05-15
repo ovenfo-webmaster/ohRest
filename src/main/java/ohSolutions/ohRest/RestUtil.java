@@ -16,7 +16,6 @@ import javax.imageio.ImageIO;
 
 import sun.misc.BASE64Decoder;
 
-@SuppressWarnings("restriction")
 public class RestUtil {
 	
 	public String imagenToString(BufferedImage image) throws IOException {
