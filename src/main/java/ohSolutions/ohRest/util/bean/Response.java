@@ -5,11 +5,19 @@ public class Response {
 	private boolean isCorrect;
 	private Object result;
 	private String message;
+
+	public Response() {
+	}
 	
-	public boolean isCorrect() {
+	public Response(Object result) {
+		this.isCorrect = true;
+		this.result = result;
+	}
+	
+	public boolean isIsCorrect() {
 		return isCorrect;
 	}
-	public void isCorrect(boolean isCorrect) {
+	public void setCorrect(boolean isCorrect) {
 		this.isCorrect = isCorrect;
 	}
 	public Object getResult() {

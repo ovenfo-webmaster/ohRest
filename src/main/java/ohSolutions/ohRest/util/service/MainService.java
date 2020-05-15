@@ -85,7 +85,7 @@ public abstract class MainService extends HttpServlet {
 
 		String ref = ((request.getParameter("rnd") != null)?request.getParameter("rnd"):"") + " ["+request.getServletPath()+"/"+method+"]";
 		Response objRespuesta = new Response();
-				 objRespuesta.isCorrect(false);
+				 objRespuesta.setCorrect(false);
 				 
 		if(method == null) {
 			objRespuesta.setMessage("ohRest MainService Incorrect Method");
@@ -98,7 +98,7 @@ public abstract class MainService extends HttpServlet {
 				Object result = ejecutarServicio(request, response, method);
 				if(!(result != null && result.getClass().equals(ForceDownload.class))) {
 					objRespuesta.setResult(result);
-					objRespuesta.isCorrect(true);
+					objRespuesta.setCorrect(true);
 					PrintWriter texto = response.getWriter();
 					texto.print(gson.toJson(objRespuesta));
 				}
@@ -117,7 +117,7 @@ public abstract class MainService extends HttpServlet {
 					logger.fatal(e.getMessage());
 					response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED); // 405
 				} else {
-					objRespuesta.isCorrect(false);
+					objRespuesta.setCorrect(false);
 					objRespuesta.setMessage(e.getMessage());
 					String message = "t<"+(System.currentTimeMillis() - time_init)+"> "+ref;
 					logger.fatal(message);

@@ -1,5 +1,7 @@
 package ohSolutions.ohRest.util.security;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -8,13 +10,14 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import com.google.gson.Gson;
 
 import ohSolutions.ohJpo.dao.Jpo;
 import ohSolutions.ohJpo.dao.JpoUtil;
@@ -97,7 +100,7 @@ public class Oauth2 {
 		// 1.- Check if 'oauth_access_token' exist a row with authentication_id
 		Map<String, Object> dToken = getToken("authentication_id", autenticationId);
 		
-		Gson TEST = new Gson();
+		//Gson TEST = new Gson();
 		//System.out.println(TEST.toJson(dToken));
 		
 		// 2.- If not exist token create the object 'contentToken' and put the roles and the login date
@@ -398,4 +401,40 @@ public class Oauth2 {
         return (Map<String, Object>) client.obtener("access_token_validity");
 	}
 	
+	public String preCreateToken(Map<String, String> oauthConfig, String user, Collection<String> roles, HttpServletRequest request) throws Exception {
+		oauthConfig.put("ip_address", getClientIpAddress(request));
+		return this.createToken(oauthConfig, user, roles);
+	}
+	
+	public static String getClientIpAddress(HttpServletRequest request) throws UnknownHostException {
+	    String xForwardedForHeader = request.getHeader("X-Forwarded-For");
+    	logger.debug(xForwardedForHeader);
+    	if (xForwardedForHeader == null || "".equals(xForwardedForHeader)) {
+	    	String ip = request.getRemoteAddr();
+	    	if (ip.equalsIgnoreCase("0:0:0:0:0:0:0:1")) {
+			    InetAddress inetAddress = InetAddress.getLocalHost();
+			    String ipAddress = inetAddress.getHostAddress();
+			    ip = ipAddress;
+			}
+	    	logger.debug(ip);
+	    	return ip;
+	    } else {
+	    	String ip = new StringTokenizer(xForwardedForHeader, ",").nextToken().trim();
+	    	int findSep = ip.indexOf(":");
+	    	if(findSep>=0) {
+	    		ip = ip.substring(0, findSep);
+	    	}
+	    	logger.debug(ip);
+	        return ip;
+	    }
+	}
+	
+	public Object preCloseToken(HttpServletRequest request) throws Exception {
+		return closeToken(getToken(request), getClientIpAddress(request));
+	}
+	
+	private String getToken(HttpServletRequest request) {
+		String auto = request.getHeader("Authorization");
+		return auto.substring(7);
+	}
 }

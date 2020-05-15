@@ -56,13 +56,13 @@ public abstract class BaseController extends HttpServlet {
 		Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ss").create();
 
 		Response objRespuesta = new Response();
-				 objRespuesta.isCorrect(false);
+				 objRespuesta.setCorrect(false);
 				 
 		try {
 			Object result = ejecutarServicio(request,response);
 			if(!(result != null && result.getClass().equals(ForceDownload.class))) {
 				objRespuesta.setResult(result);
-				objRespuesta.isCorrect(true);
+				objRespuesta.setCorrect(true);
 				PrintWriter texto = response.getWriter();
 				texto.print(gson.toJson(objRespuesta));
 			}
@@ -76,7 +76,7 @@ public abstract class BaseController extends HttpServlet {
 				response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
 				logger.warn("t<"+(System.currentTimeMillis() - time_init)+"> "+ref);
 			} else {
-				objRespuesta.isCorrect(false);
+				objRespuesta.setCorrect(false);
 				objRespuesta.setMessage(e.getMessage());
 				String message = "t<"+(System.currentTimeMillis() - time_init)+"> "+ref;
 				//logger.error(message);
