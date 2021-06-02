@@ -103,16 +103,18 @@ public class SpringInterceptor implements HandlerInterceptor {
 				} else {
 					
 					try {
-						new Oauth2(this.dsOauth2, propertiesFile, ppo).checkAccess(oauth2Roles, getToken(request), getClientIpAddress(request));
+						new Oauth2(this.dsOauth2, propertiesFile, ppo).checkAccess(oauth2Roles, Oauth2.getToken(request), getClientIpAddress(request));
 					} catch (Exception e) {
 						if(e.getMessage() != null && e.getMessage().equals(Oauth2.sc_error_notFoundToken)) {
 							logger.fatal("t<"+(System.currentTimeMillis() - time_init)+"> "+ref);
 							logger.fatal(e.getMessage());
 							response.setStatus(HttpStatus.SC_UNAUTHORIZED); // 401
+							return false;
 						} else if(e.getMessage() != null && e.getMessage().equals(Oauth2.sc_error_notRolEnable)) {
 							logger.fatal("t<"+(System.currentTimeMillis() - time_init)+"> "+ref);
 							logger.fatal(e.getMessage());
 							response.setStatus(HttpStatus.SC_FORBIDDEN); // 403
+							return false;
 						}
 					}
 					
@@ -154,11 +156,6 @@ public class SpringInterceptor implements HandlerInterceptor {
         	ppo.finalizar();
         }
     }
-    
-	private String getToken(HttpServletRequest request) {
-		String auto = request.getHeader("Authorization");
-		return auto.substring(7);
-	}
 	
 	public static String getClientIpAddress(HttpServletRequest request) throws UnknownHostException {
 	    String xForwardedForHeader = request.getHeader("X-Forwarded-For");

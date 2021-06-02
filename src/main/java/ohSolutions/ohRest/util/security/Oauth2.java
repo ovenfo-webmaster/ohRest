@@ -389,14 +389,16 @@ public class Oauth2 {
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> getTokenByDinamic(String dinamicTokenId) throws Exception {
 		
-        Tabla token = ppo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
-        token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
-        
         if(dinamicTokenId != null && dinamicTokenId.trim().length() > 0) {
+        	
+            Tabla token = ppo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
+            token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
+        	
         	return (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id");
         } else {
         	return null;
         }
+                
 	}
 	
 	// Obtain the correct configuration from oauth_client_details
@@ -464,7 +466,7 @@ public class Oauth2 {
 	}
 	
 	public static String getToken(String authorization) {
-		return authorization.substring(7);
+		return authorization != null && authorization.trim().length()>6 ? authorization.substring(7) : null;
 	}
 	
 	@SuppressWarnings("unchecked")

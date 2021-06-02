@@ -1,5 +1,6 @@
 package ohSolutions.ohRest;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,8 +8,10 @@ import org.junit.Test;
 
 import ohSolutions.ohJpo.dao.Jpo;
 import ohSolutions.ohJpo.dao.Procedure;
+import ohSolutions.ohJpo.dao.Tabla;
 import ohSolutions.ohRest.util.bean.SendGridConfig;
 import ohSolutions.ohRest.util.mail.MailUtil;
+import ohSolutions.ohRest.util.security.Oauth2;
 
 /*
 import java.util.ArrayList;
@@ -118,4 +121,54 @@ public class RestTest {
 		miJpo.finalizar();
     	
     }
+    
+    @Test
+    public void testoauth() throws Exception {
+    	
+    	System.out.println("Oauth2.getToken");
+    	
+    	String _bearer = Oauth2.getToken("Bearer");
+    	System.out.println(_bearer);
+    	
+    	Map<String, Object> _data = this.getTokenByDinamic(_bearer);
+    
+    	System.out.println("Map<String, Object> getTokenByDinamic");
+    	System.out.println(_data);
+    	
+    }
+    
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getTokenByDinamic(String dinamicTokenId) throws Exception {
+		
+		
+        Map<String, String> config = new HashMap<String, String>();
+
+        config.put("type", "SQLSERVER");
+        config.put("url", "pilotodbqa.database.windows.net");
+        config.put("db", "maersk-apmtis-sqlserver-inland-dev");
+        config.put("username", "adminsqlqa");
+        config.put("password", "H${:3Q]pE7X&N7JW");
+        
+		System.out.println("--> Inicio");
+		
+        Jpo miJpo = new Jpo(config);
+        
+		
+
+        
+        if(dinamicTokenId != null && dinamicTokenId.trim().length() > 0) {
+        	
+            Tabla token = miJpo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
+            token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
+            
+        	return (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id");
+        } else {
+        	return null;
+        }
+	}
+	
+	private String getBinary(String token) {
+		return "CONVERT(VARCHAR(MAX), "+token+")";
+	}
+    
 }
