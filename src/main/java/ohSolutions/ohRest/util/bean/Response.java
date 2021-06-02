@@ -14,6 +14,11 @@ public class Response {
 		this.result = result;
 	}
 	
+	public Response(String message) {
+		this.isCorrect = false;
+		this.message = message;
+	}
+	
 	public boolean isIsCorrect() {
 		return isCorrect;
 	}

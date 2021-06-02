@@ -9,19 +9,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URL;
 import java.security.MessageDigest;
-import java.util.Base64;
-
+import org.apache.commons.codec.binary.Base64;
 import javax.imageio.ImageIO;
-
-import sun.misc.BASE64Decoder;
 
 public class RestUtil {
 	
 	public String imagenToString(BufferedImage image) throws IOException {
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		ImageIO.write(image, "jpg", os);
-		return Base64.getEncoder().encodeToString(os.toByteArray());
+		return java.util.Base64.getEncoder().encodeToString(os.toByteArray());
 	}
 	
 	public String fileToString(String fileURL) throws IOException {
@@ -38,7 +36,21 @@ public class RestUtil {
          catch (IOException e1) {
         	 e1.printStackTrace();
          }
-        return Base64.getEncoder().encodeToString(b);
+        return java.util.Base64.getEncoder().encodeToString(b);
+	}
+	
+	public String urlFileToString(String attachmenturl) throws IOException {
+		
+    	URL url = new URL(attachmenturl);
+    	BufferedImage img = ImageIO.read(url);
+    	
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", baos);
+        
+        byte[] b = baos.toByteArray();
+        
+        return java.util.Base64.getEncoder().encodeToString(b);
+		
 	}
 	
 	public BufferedImage getImage(Object source) throws IOException {
@@ -50,10 +62,10 @@ public class RestUtil {
 	
 	public BufferedImage getImage(String source) throws IOException {
 		BufferedImage image = null;
-		byte[] imageByte;
 		
-		BASE64Decoder decoder = new BASE64Decoder();
-		imageByte = decoder.decodeBuffer(source);
+		Base64 decoder = new Base64();
+		byte[] imageByte = decoder.decode(source);
+		
 		ByteArrayInputStream bis = new ByteArrayInputStream(imageByte);
 		image = ImageIO.read(bis);
 		bis.close();

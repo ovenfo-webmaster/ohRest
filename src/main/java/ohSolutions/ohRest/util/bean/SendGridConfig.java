@@ -1,5 +1,10 @@
 package ohSolutions.ohRest.util.bean;
 
+import java.util.List;
+
+import com.sendgrid.helpers.mail.objects.Attachments;
+
+import ohSolutions.ohJpo.dao.Jpo;
 import ohSolutions.ohRest.util.mail.MailUtil.MailUtilListener;
 
 public class SendGridConfig {
@@ -12,6 +17,8 @@ public class SendGridConfig {
 	private String attachmentImg;
 	private String attachmentName;
 	private String attachmentId;
+	private List<Attachments> attachments;
+	private Jpo jpo;
 	
 	public boolean isAsync() {
 		return async;
@@ -60,6 +67,18 @@ public class SendGridConfig {
 	}
 	public void setAttachmentId(String attachmentId) {
 		this.attachmentId = attachmentId;
+	}
+	public List<Attachments> getAttachments() {
+		return attachments;
+	}
+	public void setAttachments(List<Attachments> attachments) {
+		this.attachments = attachments;
+	}
+	public Jpo getJpo() {
+		return jpo;
+	}
+	public void setJpo(Jpo jpo) {
+		this.jpo = jpo;
 	}
 	
 }

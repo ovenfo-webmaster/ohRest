@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -20,6 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import ohSolutions.ohJpo.dao.Jpo;
+import ohSolutions.ohJpo.dao.JpoHttpRequest;
 import ohSolutions.ohJpo.dao.JpoUtil;
 import ohSolutions.ohJpo.dao.Tabla;
 
@@ -41,6 +43,7 @@ public class Oauth2 {
 	
 	public Oauth2(String source, String propertiesFile, Jpo jpo) throws Exception {
 		this.ppo = new Jpo(source, propertiesFile);
+		
 		if(this.ppo.hashConection == jpo.hashConection) {
 			this.ppo = jpo;
 			this.onFinalize = false;
@@ -388,9 +391,12 @@ public class Oauth2 {
 		
         Tabla token = ppo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
         token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
-                
-        return (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id");
         
+        if(dinamicTokenId != null && dinamicTokenId.trim().length() > 0) {
+        	return (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id");
+        } else {
+        	return null;
+        }
 	}
 	
 	// Obtain the correct configuration from oauth_client_details
@@ -406,8 +412,24 @@ public class Oauth2 {
 		return this.createToken(oauthConfig, user, roles);
 	}
 	
+	public String preCreateToken(Map<String, String> oauthConfig, String user, Collection<String> roles, JpoHttpRequest request) throws Exception {
+		oauthConfig.put("ip_address", getClientIpAdd(request));
+		return this.createToken(oauthConfig, user, roles);
+	}
+	
 	public static String getClientIpAddress(HttpServletRequest request) throws UnknownHostException {
-	    String xForwardedForHeader = request.getHeader("X-Forwarded-For");
+		
+		JpoHttpRequest jpoRequest = new JpoHttpRequest();
+
+		jpoRequest.setHeader("x-forwarded-for", request.getHeader("X-Forwarded-For"));
+		jpoRequest.setRemoteAddr(request.getRemoteAddr());
+		
+		return getClientIpAdd(jpoRequest);
+		
+	}
+	
+	public static String getClientIpAdd(JpoHttpRequest request) throws UnknownHostException {
+	    String xForwardedForHeader = request.getHeader("x-forwarded-for");
     	logger.debug(xForwardedForHeader);
     	if (xForwardedForHeader == null || "".equals(xForwardedForHeader)) {
 	    	String ip = request.getRemoteAddr();
@@ -433,8 +455,38 @@ public class Oauth2 {
 		return closeToken(getToken(request), getClientIpAddress(request));
 	}
 	
-	private String getToken(HttpServletRequest request) {
-		String auto = request.getHeader("Authorization");
-		return auto.substring(7);
+	public Object preCloseToken(JpoHttpRequest request) throws Exception {
+		return closeToken(getToken(request.getHeader("authorization")), getClientIpAdd(request));
 	}
+	
+	public static String getToken(HttpServletRequest request) {
+		return getToken(request.getHeader("Authorization"));
+	}
+	
+	public static String getToken(String authorization) {
+		return authorization.substring(7);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static Collection<String> getRoles(Object roles) {
+		
+		List<Object> strRoles = (List<Object>) roles;
+		
+		Collection<String> elements = new ArrayList<String>();
+		
+		if(strRoles != null) {
+			Map<Object, Boolean> hasRol = new HashMap<Object, Boolean>();
+			for(int i = 0; i < strRoles.size(); i++) {
+				List<Object> attributes = (List<Object>) strRoles.get(i);
+				if(hasRol.get(attributes.get(0)) == null) {
+					hasRol.put(attributes.get(0), true);
+					elements.add("" + attributes.get(0));
+				}
+			}
+		}
+		
+		return elements;
+		
+	}
+	
 }

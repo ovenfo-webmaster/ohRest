@@ -33,15 +33,15 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.sendgrid.Attachments;
-import com.sendgrid.Content;
-import com.sendgrid.Email;
-import com.sendgrid.Mail;
 import com.sendgrid.Method;
-import com.sendgrid.Personalization;
 import com.sendgrid.Request;
 import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
+import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Attachments;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
+import com.sendgrid.helpers.mail.objects.Personalization;
 
 import ohSolutions.ohJpo.dao.Jpo;
 import ohSolutions.ohJpo.dao.JpoUtil;
@@ -68,30 +68,40 @@ public class MailUtil {
         public void onSendEmail(String id, String msg_id);
     }
     
-    private static void onSendEmail(String datasource, String id, String msg_id) throws Exception {
-    	onSendEmail(datasource, id, msg_id, null);
+    private static void onSendEmail(String datasource, String id, String msg_id, Jpo customJpo) throws Exception {
+    	onSendEmail(datasource, id, msg_id, null, customJpo);
     }
     
 	@SuppressWarnings("unchecked")
-	private static void onSendEmail(String datasource, String id, String msg_id, String properties_folder) throws Exception {
+	private static void onSendEmail(String datasource, String id, String msg_id, String properties_folder, Jpo customJpo) throws Exception {
+		
 		Jpo ppo;
+		
 		try {
 			
-			ppo = new Jpo(datasource, null, properties_folder);
-			ppo.setData("COP", "email_enviado_id", id);
-			ppo.setData("COP", "msg_id", msg_id);
+			if(customJpo != null) {
+				ppo = customJpo;
+			} else {
+				ppo = new Jpo(datasource, null, properties_folder);
+			}
 			
-			Procedure pResult = ppo.procedure("ges.email_editar","COP");
-			pResult.input("email_enviado_id", Jpo.INTEGER);
-			pResult.input("msg_id", Jpo.STRING);
+			System.out.println("conectando "+ppo.getSourceInfo()+" - "+id+" - "+msg_id);
+			
+			Procedure pResult = ppo.procedure("ges.email_editar");
+			pResult.input("email_enviado_id", id, Jpo.INTEGER);
+			pResult.input("msg_id", msg_id, Jpo.STRING);
 			pResult.output("estado", Jpo.INTEGER);
 			pResult.output("mensaje", Jpo.STRING);
 			
 			List<Object> resultado = (List<Object>)  pResult.executeL();
-			ppo.commit();
-			ppo.finalizar();	
+			
+			if(customJpo == null) {
+				ppo.commit();
+				ppo.finalizar();
+			}
 			
 			logger.debug("Se grabó correctamente "+resultado.get(0));
+			System.out.println(resultado);
 			
 			if(!resultado.get(0).equals(1)) {
 				logger.debug(resultado.get(1));
@@ -99,6 +109,7 @@ public class MailUtil {
 			
 		} catch (Exception e) {
 	    	logger.error(e.getMessage(), e);
+	    	e.printStackTrace();
 			throw new Exception("ohSolutions.Rest - Error after send mail to save");
 		}
     }
@@ -109,7 +120,7 @@ public class MailUtil {
 				try {
 					Map<String, String> resultado = MailUtil.sendMail(templateXML, project_prefix);
 					if(datasource != null) {
-						onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"));
+						onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), null);
 					}
 				} catch (Exception e) {
 					logger.debug(e.getMessage());
@@ -120,7 +131,7 @@ public class MailUtil {
 		} else {
 			Map<String, String> resultado = MailUtil.sendMail(templateXML, project_prefix);
 			if(datasource != null) {
-				onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"));
+				onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), null);
 			}
 			return true;
 		}
@@ -152,15 +163,15 @@ public class MailUtil {
 	}
 
 	public static boolean sendMail(final String templateJSON, SendGridConfig config) throws Exception {
-		
 		if (config.isAsync()) {
 			new Thread(() -> {
 				try {
 					SendGridResponse resultado = getDocument(templateJSON, config);
 					if(config.getDataSource() != null){
-						onSendEmail(config.getDataSource(), resultado.getId(), resultado.getMsg_id());
+						onSendEmail(config.getDataSource(), resultado.getId(), resultado.getMsg_id(), config.getJpo());
 					}
 				} catch (Exception e) {
+					System.out.println(e.getMessage());
 					logger.debug(e.getMessage());
 					e.printStackTrace();
 				}
@@ -169,7 +180,7 @@ public class MailUtil {
 		} else {
 			SendGridResponse resultado = getDocument(templateJSON, config);
 			if(config.getDataSource() != null){
-				onSendEmail(config.getDataSource(), resultado.getId(), resultado.getMsg_id());
+				onSendEmail(config.getDataSource(), resultado.getId(), resultado.getMsg_id(), config.getJpo());
 			}
 			return true;
 		}
@@ -177,7 +188,7 @@ public class MailUtil {
 	}
 	
 	private static SendGridResponse getDocument(String doc, SendGridConfig config) throws Exception {
-		
+
 		JSONObject mail = new JSONObject(doc);
 		
 		SendGridData sendData = new SendGridData();
@@ -194,9 +205,13 @@ public class MailUtil {
 		sendData.setProjectPrefix(config.getProjectPrefix());
 		sendData.setPropertiesFolder(config.getPropertiesFolder());
 		
+		sendData.setAttachmentUrl(mail.has("attach_img_url") ? mail.getString("attach_img_url") : null);
 		sendData.setAttachmentImg(config.getAttachmentImg());
-		sendData.setAttachmentName(config.getAttachmentName());
-		sendData.setAttachmentId(config.getAttachmentId());
+		sendData.setAttachmentName(mail.has("attach_img_name") ? mail.getString("attach_img_name") : config.getAttachmentName());
+		sendData.setAttachmentId(mail.has("attach_img_id") ? mail.getString("attach_img_id") : config.getAttachmentId());
+		
+		sendData.setAttachments(config.getAttachments());
+		sendData.setSendgridApiKey(mail.has("sendgrid_api_key") ? mail.getString("sendgrid_api_key") : null);
 		
 		String msg_id = sendGrid(sendData);
 		
@@ -210,7 +225,7 @@ public class MailUtil {
 				try {
 					Map<String, String> resultado = MailUtil.sendMail(templateXML, project_prefix, properties_folder);
 					if(datasource != null) {
-						onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), properties_folder);
+						onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), properties_folder, null);
 					}
 				} catch (Exception e) {
 					logger.debug(e.getMessage());
@@ -221,7 +236,7 @@ public class MailUtil {
 		} else {
 			Map<String, String> resultado = MailUtil.sendMail(templateXML, project_prefix, properties_folder);
 			if(datasource != null) {
-				onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), properties_folder);
+				onSendEmail(datasource, resultado.get("id"), resultado.get("msg_id"), properties_folder, null);
 			}
 			return true;
 		}
@@ -306,14 +321,15 @@ public class MailUtil {
 		
 		RestUtil ru = new RestUtil();
 	    
-		final String apikey = JpoUtil.getPropertieProyect(sendData.getProjectPrefix(), jpoMailSendgridApiKey, sendData.getPropertiesFolder());
+		final String apikey = sendData.getSendgridApiKey() != null ? sendData.getSendgridApiKey() : JpoUtil.getPropertieProyect(sendData.getProjectPrefix(), jpoMailSendgridApiKey, sendData.getPropertiesFolder());
 		
+		final String attachmenturl = sendData.getAttachmentUrl();
 		final String attachmentimg = sendData.getAttachmentImg() != null ? sendData.getAttachmentImg() : JpoUtil.getPropertieProyect(jpoMailAttImg, sendData.getPropertiesFolder());
 		final String attachmentname = sendData.getAttachmentName() != null ? sendData.getAttachmentName() : JpoUtil.getPropertieProyect(jpoMailAttName, sendData.getPropertiesFolder());
 		final String attachmentid = sendData.getAttachmentId() != null ? sendData.getAttachmentId() : JpoUtil.getPropertieProyect(jpoMailAttId, sendData.getPropertiesFolder());
 
 		logger.debug(apikey);
-
+		
 		Email _from = new Email(sendData.getFrom());
 
 	    String _subject = sendData.getSubject();
@@ -346,12 +362,19 @@ public class MailUtil {
 	    }
 	    
 	    mail.addPersonalization(personalizations);
-	    
-	    if(attachmentimg != null && attachmentname != null && attachmentid != null){
+
+	    if(attachmentname != null && attachmentid != null && (attachmentimg != null || attachmenturl != null)){
 	    	
 		    Attachments attachments = new Attachments();
 		    
-		    attachments.setContent(ru.fileToString(attachmentimg));
+		    if(attachmenturl != null) {
+		    	attachments.setContent(ru.urlFileToString(attachmenturl));
+		    } else {
+			    if(attachmentimg != null) {
+			    	attachments.setContent(ru.fileToString(attachmentimg));
+			    }
+		    }
+		    
 		    attachments.setType("image/png");
 		    attachments.setFilename(attachmentname);
 		    attachments.setContentId(attachmentid);
@@ -360,6 +383,15 @@ public class MailUtil {
 		    
 	    }
 	    
+	    // Adding new Attachments
+	    List<Attachments> files = sendData.getAttachments();
+	    if(files != null && files.size() > 0) {
+	    	for(int i = 0; i < files.size(); i++) {
+	    		mail.addAttachments(files.get(i));
+	    	}
+	    }
+	    // -----------------------
+	    System.out.println("Sending mail for "+apikey);
 	    SendGrid sg = new SendGrid(apikey);
 	    Request request = new Request();
 	    try {
@@ -369,6 +401,10 @@ public class MailUtil {
 	      Response response = sg.api(request);
 	      
 	      logger.debug(response);
+	      System.out.println("Response sendgrid");
+	      System.out.println(response.getStatusCode());
+	      System.out.println(response.getBody());
+	      System.out.println(response.getHeaders().toString());
 
 	      String msg_id = null;
 	      if(response.getStatusCode()==202) {
@@ -378,9 +414,10 @@ public class MailUtil {
 		      logger.debug(response.getBody());
 		      logger.debug(response.getHeaders());
 	      }
-	      
+	      System.out.println(msg_id);
 	      return msg_id;
 	    } catch (IOException e) {
+	    	e.printStackTrace();
 	    	logger.error(e.getMessage(), e);
 			throw new Exception("ohSolutions.Rest - Error sending email by sendGrid");
 	    }

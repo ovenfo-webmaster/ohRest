@@ -1,5 +1,9 @@
 package ohSolutions.ohRest.util.bean;
 
+import java.util.List;
+
+import com.sendgrid.helpers.mail.objects.Attachments;
+
 public class SendGridData {
 	
 	private String id;
@@ -12,8 +16,11 @@ public class SendGridData {
 	private String projectPrefix;
 	private String propertiesFolder;
 	private String attachmentImg;
+	private String attachmentUrl;
 	private String attachmentName;
 	private String attachmentId;
+	private List<Attachments> attachments;
+	private String sendgridApiKey;
 	
 	public String getId() {
 		return id;
@@ -75,6 +82,12 @@ public class SendGridData {
 	public void setAttachmentImg(String attachmentImg) {
 		this.attachmentImg = attachmentImg;
 	}
+	public String getAttachmentUrl() {
+		return attachmentUrl;
+	}
+	public void setAttachmentUrl(String attachmentUrl) {
+		this.attachmentUrl = attachmentUrl;
+	}
 	public String getAttachmentName() {
 		return attachmentName;
 	}
@@ -86,6 +99,18 @@ public class SendGridData {
 	}
 	public void setAttachmentId(String attachmentId) {
 		this.attachmentId = attachmentId;
+	}
+	public List<Attachments> getAttachments() {
+		return attachments;
+	}
+	public void setAttachments(List<Attachments> attachments) {
+		this.attachments = attachments;
+	}
+	public String getSendgridApiKey() {
+		return sendgridApiKey;
+	}
+	public void setSendgridApiKey(String sendgridApiKey) {
+		this.sendgridApiKey = sendgridApiKey;
 	}
 		
 }
