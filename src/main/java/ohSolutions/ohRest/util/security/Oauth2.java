@@ -226,9 +226,16 @@ public class Oauth2 {
 		return true;
 	}
 	
-	// For checking if has token, and fullfill the roles
-	public void checkAccess(String roles, String dinamicToken, String ip_address) throws Exception {
-		Map<String, Object> dToken = getTokenByDinamic(dinamicToken);
+	public Map<String, Object> checkAccess(String roles, String dinamicToken, String ip_address, String service) throws Exception {
+		
+		Map<String, Object> dToken;
+		
+		if(service == null) {
+			dToken = getTokenByDinamic(dinamicToken);
+		} else {
+			dToken = getTokenByDinamicService(dinamicToken, service);
+		}
+		
 		if(dToken == null || dToken.size()==0) {
 			
 			throw new Exception(sc_error_notFoundToken); // Oauth2 Do not found token
@@ -249,9 +256,18 @@ public class Oauth2 {
 		if(this.onFinalize) {
 			ppo.finalizar();
 		}
+		
+		return dToken;
+		
+	}
+	
+	// For checking if has token, and fullfill the roles
+	public void checkAccess(String roles, String dinamicToken, String ip_address) throws Exception {
+		this.checkAccess(roles, dinamicToken, ip_address, null);
 	}
 	
 	// For check if has token id just
+	@Deprecated
 	public boolean checkToken(String dinamicToken, String ip_address) throws Exception {
 		
 		Map<String, Object> dToken = getTokenByDinamic(dinamicToken);
@@ -399,6 +415,62 @@ public class Oauth2 {
         	return null;
         }
                 
+	}
+	
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getTokenByDinamicService(String dinamicTokenId, String service) throws Exception {
+		
+        if(dinamicTokenId != null && dinamicTokenId.trim().length() > 0) {
+        	
+            Tabla token = ppo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
+            token.donde("ACD.token_id = '"+dinamicTokenId+"' AND logout_date IS NULL");
+        	
+            Map<String, Object> dToken = (Map<String, Object>) token.obtener(this.getBinary("ACT.token")+" AS token, ACT.authentication_id, ACT.user_name AS usuario_id");
+        	
+        	if(dToken == null || dToken.size()==0) {
+        		
+        		return null;
+        		
+        	} else {
+        		
+        		String usuario_id = (String) dToken.get("usuario_id");
+        		
+        		Tabla tservicio = ppo.tabla("seg.servicio");
+	        		  tservicio.donde("nombre LIKE '"+service+"'");
+	        	
+	        	Map<String, Object> indicador_protegido = (Map<String, Object>) tservicio.obtener("indicador_protegido");
+        		
+        		if (indicador_protegido.get("indicador_protegido") != null && indicador_protegido.get("indicador_protegido").equals("1")) {
+        			
+                    Tabla tServiceAccess = ppo.tabla("seg.usuario_rol USR (NOLOCK)"
+                    		+ "	INNER JOIN seg.rol_menu RME (NOLOCK) ON RME.rol_id = USR.rol_id"
+                    		+ "	INNER JOIN seg.menu MEN (NOLOCK) ON MEN.menu_id = RME.menu_id"
+                    		+ "	INNER JOIN seg.menu_servicio MSE (NOLOCK) ON MSE.menu_id = RME.menu_id"
+                    		+ "	INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = MSE.servicio_id");
+                    tServiceAccess.donde("USR.usuario_id = '"+usuario_id+"' AND SER.nombre LIKE '"+service+"'");
+
+                    Map<String, Object> dServiceAccess = (Map<String, Object>) tServiceAccess.obtener("DISTINCT SER.servicio_id AS servicio_id");
+                	
+                    if(dServiceAccess == null || dServiceAccess.size()==0) {
+                    	
+                    	return null;
+                    	
+                    } else {
+                    	
+                    	return dToken;
+                    	
+                    }
+        			
+        		} else {
+        			return dToken;
+        		}
+        		
+        	}
+        	
+        } else {
+        	return null;
+        }
+
 	}
 	
 	// Obtain the correct configuration from oauth_client_details

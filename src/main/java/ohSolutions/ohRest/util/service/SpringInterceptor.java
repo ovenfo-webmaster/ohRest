@@ -3,6 +3,7 @@ package ohSolutions.ohRest.util.service;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import javax.servlet.http.HttpServletRequest;
@@ -50,9 +51,7 @@ public class SpringInterceptor implements HandlerInterceptor {
 		
         HandlerMethod handlerMethod;
         try {
-        	
-        	// com.ovenfo.service.security.SistemaServiceImp#testing(Jpo, HttpServletRequest)
-        	// org.springframework.web.servlet.handler.AbstractHandlerMapping$PreFlightHandler@71a159ac
+
         	handlerMethod = (HandlerMethod) handler;
 			Method method = handlerMethod.getMethod();
 			
@@ -95,6 +94,8 @@ public class SpringInterceptor implements HandlerInterceptor {
 
 			Jpo ppo = new Jpo(request, source, propertiesFile);
 			
+			Map<String, Object> result = null;
+			
 			if(oauth2Roles != null || oauth2Enable) {
 				if(request.getHeader("Authorization") == null) {
 					//response.getWriter().write("something");
@@ -103,7 +104,7 @@ public class SpringInterceptor implements HandlerInterceptor {
 				} else {
 					
 					try {
-						new Oauth2(this.dsOauth2, propertiesFile, ppo).checkAccess(oauth2Roles, Oauth2.getToken(request), getClientIpAddress(request));
+						result = new Oauth2(this.dsOauth2, propertiesFile, ppo).checkAccess(oauth2Roles, Oauth2.getToken(request), getClientIpAddress(request), request.getServletPath());
 					} catch (Exception e) {
 						if(e.getMessage() != null && e.getMessage().equals(Oauth2.sc_error_notFoundToken)) {
 							logger.fatal("t<"+(System.currentTimeMillis() - time_init)+"> "+ref);
@@ -119,6 +120,10 @@ public class SpringInterceptor implements HandlerInterceptor {
 					}
 					
 				}
+			}
+			
+			if(result != null) {
+				ppo.setData("_AUTH_USER", "usuario_id", ""+result.get("usuario_id"));
 			}
 
 			request.setAttribute("jpo", ppo);
@@ -147,6 +152,11 @@ public class SpringInterceptor implements HandlerInterceptor {
 	        */
 
         return true;
+    }
+    
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    	HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
     
     @Override

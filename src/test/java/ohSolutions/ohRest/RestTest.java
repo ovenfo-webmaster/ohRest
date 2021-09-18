@@ -122,7 +122,7 @@ public class RestTest {
     	
     }
     
-    @Test
+    //@Test
     public void testoauth() throws Exception {
     	
     	System.out.println("Oauth2.getToken");
@@ -153,9 +153,6 @@ public class RestTest {
 		
         Jpo miJpo = new Jpo(config);
         
-		
-
-        
         if(dinamicTokenId != null && dinamicTokenId.trim().length() > 0) {
         	
             Tabla token = miJpo.tabla("oauth_access_history ACD INNER JOIN oauth_access_token ACT ON ACT.authentication_id = ACD.authentication_id");
@@ -170,5 +167,63 @@ public class RestTest {
 	private String getBinary(String token) {
 		return "CONVERT(VARCHAR(MAX), "+token+")";
 	}
+	
+    @SuppressWarnings("unchecked")
+    //@Test
+    public void oauthtestservice() throws Exception {
+    	
+        Map<String, String> config = new HashMap<String, String>();
+
+        config.put("type", "SQLSERVER");
+        config.put("url", "pilotodbqa.database.windows.net");
+        config.put("db", "maersk-apmtis-sqlserver-inland-dev");
+        config.put("username", "adminsqlqa");
+        config.put("password", "H${:3Q]pE7X&N7JW");
+        
+        Jpo miJpo = new Jpo(config);
+        
+		Tabla tservicio = miJpo.tabla("seg.servicio");
+    		tservicio.donde("nombre LIKE 'aDMUsuarioService.segusuarioValidar'");
+    	
+    	Map<String, Object> respuesta = (Map<String, Object>) tservicio.obtener("indicador_protegido");
+    	
+    	System.out.println(respuesta);
+    	System.out.println(respuesta.get("indicador_protegido"));
+    	System.out.println(respuesta.get("indicador_protegido").equals("1"));
+    	
+    }
     
+    @SuppressWarnings("unchecked")
+    //@Test
+    public void oauthtestservicemenu() throws Exception {
+    	
+        Map<String, String> config = new HashMap<String, String>();
+
+        config.put("type", "SQLSERVER");
+        config.put("url", "pilotodbqa.database.windows.net");
+        config.put("db", "maersk-apmtis-sqlserver-inland-dev");
+        config.put("username", "adminsqlqa");
+        config.put("password", "H${:3Q]pE7X&N7JW");
+        
+        Jpo miJpo = new Jpo(config);
+        
+        Tabla tServiceAccess = miJpo.tabla("seg.usuario_rol USR (NOLOCK)"
+        		+ "	INNER JOIN seg.rol_menu RME (NOLOCK) ON RME.rol_id = USR.rol_id"
+        		+ "	INNER JOIN seg.menu MEN (NOLOCK) ON MEN.menu_id = RME.menu_id"
+        		+ "	INNER JOIN seg.menu_servicio MSE (NOLOCK) ON MSE.menu_id = RME.menu_id"
+        		+ "	INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = MSE.servicio_id");
+        tServiceAccess.donde("USR.usuario_id = '1' AND SER.nombre LIKE 'aDMUsuarioService.segusuarisoRegistrarNuevo'");
+
+        Map<String, Object> dServiceAccess = (Map<String, Object>) tServiceAccess.obtener("DISTINCT SER.servicio_id AS servicio_id");
+    	
+        System.out.println(dServiceAccess);
+        
+        if(dServiceAccess == null || dServiceAccess.size()==0) {
+        	System.out.println("null");
+        } else {
+        	System.out.println("ok");
+        }
+        
+    }
+
 }
