@@ -87,7 +87,7 @@ public class FileUtil {
 			}
 
 			if((file.exists() && fileSave.isRewritable()) || !file.exists()){
-				BufferedWriter bwProcesoController =new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file,true), "UTF-8"));
+				BufferedWriter bwProcesoController =new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8")); // Remove FileOutputStream(file, true)
 				bwProcesoController.write(fileSave.getSource());
 				bwProcesoController.close();
 			}

@@ -5,7 +5,7 @@
 
 	<groupId>ohSolutions</groupId>
 	<artifactId>ohRest</artifactId>
-	<version>2.2.0.0</version>
+	<version>2.2.0.3</version>
 	<packaging>jar</packaging>
 
 	<name>ohRest</name>
@@ -72,7 +72,7 @@
 		<dependency>
 			<groupId>ohSolutions</groupId>
 			<artifactId>ohJpo</artifactId>
-			<version>2.2.0.0</version>
+			<version>2.2.0.2</version>
 		</dependency>
 	</dependencies>
 	<repositories>
@@ -105,5 +105,8 @@
 			<url>https://pkgs.dev.azure.com/ovenfowebmaster/ovenfo/_packaging/website/maven/v1</url>
 		</repository>
 	</distributionManagement>
-	<description>v2.2.0.0</description>
+	<description>mvn deploy -DskipTests
+v2.2.0.0
+v2.2.0.1 - Fix log4j vulnerability
+v2.2.0.3 - Fix FileUtil FileOutputStream without append true</description>
 </project>
