@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import ohSolutions.ohJpo.dao.Jpo;
@@ -78,7 +77,7 @@ public class Oauth2 {
 		
 		Map<String, Object> client = loginClient(clientId, clientSecret);
 		
-		if(client == null){
+		if(client == null || client.get("access_token_validity") == null){
 			throw new Exception("ohRest Oauth2 Do not fount client detail");
 		} 
 
@@ -100,9 +99,16 @@ public class Oauth2 {
 		 * */
 		String contentToken = "";
 		
+		
+		 
 		// 1.- Check if 'oauth_access_token' exist a row with authentication_id
 		Map<String, Object> dToken = getToken("authentication_id", autenticationId);
-		
+/*
+		System.out.println("-----------");
+		System.out.println(autenticationId);
+		System.out.println(user);
+		System.out.println(dToken);
+		*/
 		//Gson TEST = new Gson();
 		//System.out.println(TEST.toJson(dToken));
 		
@@ -114,13 +120,11 @@ public class Oauth2 {
 			JSONObject infoToken = new JSONObject();
 			
 			infoToken.put("roles", roles);
-			
+			/*
 			List<JSONObject> logins = new ArrayList<JSONObject>();
-			
 			logins.add(getDataLogin(tokenId, oauthConfig.get("ip_address")));
-			
 			infoToken.put("logins", logins);
-			
+			*/
 			contentToken = infoToken.toString();
 			
 			existAutenticationId = false;
@@ -134,10 +138,14 @@ public class Oauth2 {
 
 			infoToken.put("roles", roles);
 			
+			
+			if(infoToken.has("logins")) {
+				infoToken.remove("logins");
+			}
+			
+			/*
 			JSONArray logins = infoToken.getJSONArray("logins");
-			
 			boolean hasToken = false;
-			
 			for (int i = 0; i < logins.length(); i++) {
 				JSONObject login = logins.getJSONObject(i);
 				if(login.has("tokenId") && login.get("tokenId").equals(oauthConfig.get("tokenId"))) {
@@ -146,23 +154,18 @@ public class Oauth2 {
 					break;
 				}
 			}
-			
 			if(!hasToken) {
 				logins.put(getDataLogin(tokenId, oauthConfig.get("ip_address")));
 				infoToken.put("logins", logins);
 			}
+			*/
 			
 			contentToken = infoToken.toString();
 
 			existAutenticationId = true;
 			
 		}
-		/*
-		logger.debug("saveToken");
-		logger.debug(existAutenticationId);
-		logger.debug(autenticationId);
-		logger.debug(contentToken);
-		*/
+
 		// 4.- Saving the token
 		saveToken(existAutenticationId, autenticationId, clientId, user, clientSecret, contentToken);
 		//cleanHistory(autenticationId, oauthConfig.get("ip_address")); pending adding extra informacion to do
@@ -177,13 +180,14 @@ public class Oauth2 {
 
 	}
 	
+	/*
 		private JSONObject getDataLogin(String tokenId, String ip_address) {
 			JSONObject 	login = new JSONObject();
 			login.put("tokenId", tokenId);
 			login.put("ip_address", ip_address);
 			login.put("loginDate", System.currentTimeMillis());
 			return login;
-		}
+		}*/
 	
 	// For closing or logout
 	public Object closeToken(String dinamicToken, String ipAddress) throws Exception {
@@ -192,7 +196,7 @@ public class Oauth2 {
 		
 		// 1.- Exist token to close
 		if(dToken != null && dToken.size()>0) {
-			
+			/*
 			// 1.1 Removing ip_address logged in
 			JSONObject infoToken = new JSONObject(""+dToken.get("token"));
 			
@@ -210,12 +214,13 @@ public class Oauth2 {
 			}
 			infoToken.put("logins", logins);
 			
-			// 1.2. Updating history and token
-			updateHistory(dinamicToken);
 			if(isUpdateToken) {
 				updateToken(""+dToken.get("authentication_id"), infoToken.toString());
 			}
-
+			*/
+			// 1.2. Updating history and token
+			updateHistory(dinamicToken);
+			
 		}
 		
 		ppo.commitear();
@@ -297,7 +302,7 @@ public class Oauth2 {
         	token.editar();
         	  
 	}
-	 */
+	 
 	private void updateToken(String staticToken, String infoToken) throws Exception {
 
 		Tabla token = ppo.tabla("oauth_access_token");
@@ -305,7 +310,7 @@ public class Oauth2 {
         	  token.setData("token", setBinary(infoToken));
         	  token.editar();
         	
-	}
+	}*/
 	
 	private boolean checkRoles(String rolesInToken, String[] roles) {
 		for(int i = 0; i < roles.length; i++) {
@@ -321,14 +326,15 @@ public class Oauth2 {
         Tabla history = ppo.tabla("oauth_access_history");
         
         history.setData("authentication_id", autenticationId);
-        if(oauthConfig.get("latitude").length()!=0) {
-        	history.setData("latitude", oauthConfig.get("latitude"));
+        if(oauthConfig.get("latitude") != null && oauthConfig.get("latitude").length()!=0) {
+            history.setData("latitude", oauthConfig.get("latitude"));
         }
-        if(oauthConfig.get("longitude").length()!=0) {
-        	history.setData("longitude", oauthConfig.get("longitude"));
+        if(oauthConfig.get("longitude") != null && oauthConfig.get("longitude").length()!=0) {
+            history.setData("longitude", oauthConfig.get("longitude"));
         }
-        history.setData("so", oauthConfig.get("so"));
-        history.setData("browser", oauthConfig.get("browser"));
+    
+        history.setData("so", (oauthConfig.get("so") != null ? oauthConfig.get("so") : ""));
+        history.setData("browser", (oauthConfig.get("browser") != null ? oauthConfig.get("browser") : ""));
         history.setData("ip_address", oauthConfig.get("ip_address"));
         history.setData("token_id", tokenId);
         
@@ -432,38 +438,70 @@ public class Oauth2 {
         		return null;
         		
         	} else {
-        		
+        		        		
         		String usuario_id = (String) dToken.get("usuario_id");
         		
-        		Tabla tservicio = ppo.tabla("seg.servicio");
-	        		  tservicio.donde("nombre LIKE '"+service+"'");
-	        	
-	        	Map<String, Object> indicador_protegido = (Map<String, Object>) tservicio.obtener("indicador_protegido");
-        		
-        		if (indicador_protegido.get("indicador_protegido") != null && indicador_protegido.get("indicador_protegido").equals("1")) {
-        			
-                    Tabla tServiceAccess = ppo.tabla("seg.usuario_rol USR (NOLOCK)"
-                    		+ "	INNER JOIN seg.rol_menu RME (NOLOCK) ON RME.rol_id = USR.rol_id"
-                    		+ "	INNER JOIN seg.menu MEN (NOLOCK) ON MEN.menu_id = RME.menu_id"
-                    		+ "	INNER JOIN seg.menu_servicio MSE (NOLOCK) ON MSE.menu_id = RME.menu_id"
-                    		+ "	INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = MSE.servicio_id");
-                    tServiceAccess.donde("USR.usuario_id = '"+usuario_id+"' AND SER.nombre LIKE '"+service+"'");
+        		Tabla tServiceRol = ppo.tabla("seg.usuario_rol USR (NOLOCK) INNER JOIN seg.rol_servicio SRL (NOLOCK) ON SRL.rol_id = USR.rol_id INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = SRL.servicio_id");
+        		tServiceRol.donde("USR.usuario_id = '"+usuario_id+"'");
+                
+                List<Object> lServicesRol = (List<Object>) tServiceRol.seleccionar("SER.servicio_id, SER.nombre");
 
-                    Map<String, Object> dServiceAccess = (Map<String, Object>) tServiceAccess.obtener("DISTINCT SER.servicio_id AS servicio_id");
+                if(lServicesRol != null && lServicesRol.size() > 0) {
                 	
-                    if(dServiceAccess == null || dServiceAccess.size()==0) {
+                	boolean findService = false;
+                	
+                    for(int i = 0; i < lServicesRol.size(); i++) {
                     	
-                    	return null;
+                    	Map<String, Object> dServiceRol = (Map<String, Object>) lServicesRol.get(i);
                     	
-                    } else {
-                    	
-                    	return dToken;
+                    	if(dServiceRol.get("nombre").equals(service)) {
+                    		findService = true;
+                    		break;
+                    	}
                     	
                     }
-        			
-        		} else {
-        			return dToken;
-        		}
+                    
+                    if(findService) {
+                    	return dToken;
+                    } else {
+                    	return null;
+                    }
+                	
+                } else {
+                	
+            		Tabla tservicio = ppo.tabla("seg.servicio");
+	        		tservicio.donde("nombre LIKE '"+service+"'");
+  		  
+		        	Map<String, Object> indicador_protegido = (Map<String, Object>) tservicio.obtener("indicador_protegido");
+		      		
+		      		if (indicador_protegido.get("indicador_protegido") != null && indicador_protegido.get("indicador_protegido").equals("1")) {
+		      			
+		                  Tabla tServiceAccess = ppo.tabla("seg.usuario_rol USR (NOLOCK)"
+		                  		+ "	INNER JOIN seg.rol_menu RME (NOLOCK) ON RME.rol_id = USR.rol_id"
+		                  		+ "	INNER JOIN seg.menu MEN (NOLOCK) ON MEN.menu_id = RME.menu_id"
+		                  		+ "	INNER JOIN seg.menu_servicio MSE (NOLOCK) ON MSE.menu_id = RME.menu_id"
+		                  		+ "	INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = MSE.servicio_id");
+		                  tServiceAccess.donde("USR.usuario_id = '"+usuario_id+"' AND SER.nombre LIKE '"+service+"'");
+		
+		                  Map<String, Object> dServiceAccess = (Map<String, Object>) tServiceAccess.obtener("DISTINCT SER.servicio_id AS servicio_id");
+		              	
+		                  if(dServiceAccess == null || dServiceAccess.size()==0) {
+		                  	
+		                  	return null;
+		                  	
+		                  } else {
+		                  	
+		                  	return dToken;
+		                  	
+		                  }
+		      			
+		      		} else {
+		      			
+		      			return dToken;
+		                  
+		      		}				
+
+                }
         		
         	}
         	

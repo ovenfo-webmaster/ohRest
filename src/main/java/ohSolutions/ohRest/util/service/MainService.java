@@ -269,6 +269,7 @@ public abstract class MainService extends HttpServlet {
 		return new Oauth2(this.dsOauth2, propertiesFile).closeToken(getToken(request), getClientIpAddress(request));
 	}
 	
+	@SuppressWarnings("deprecation")
 	protected boolean oauth2TokenCheck(HttpServletRequest request) throws Exception {
 		return new Oauth2(this.dsOauth2, propertiesFile).checkToken(getToken(request), getClientIpAddress(request));
 	}
