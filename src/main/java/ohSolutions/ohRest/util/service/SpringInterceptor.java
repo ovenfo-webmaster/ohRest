@@ -24,7 +24,7 @@ import ohSolutions.ohRest.util.security.Oauth2;
 
 public class SpringInterceptor implements HandlerInterceptor {
 	
-	final static Logger logger = LogManager.getLogger(MainService.class);
+	final static Logger logger = LogManager.getLogger(SpringInterceptor.class);
 	
 	private String dsOauth2;
 	private String propertiesFile;
@@ -115,6 +115,10 @@ public class SpringInterceptor implements HandlerInterceptor {
 							logger.fatal("t<"+(System.currentTimeMillis() - time_init)+"> "+ref);
 							logger.fatal(e.getMessage());
 							response.setStatus(HttpStatus.SC_FORBIDDEN); // 403
+							return false;
+						} else {
+							e.printStackTrace();
+							response.setStatus(500); // 403
 							return false;
 						}
 					}

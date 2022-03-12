@@ -44,6 +44,7 @@ public class Oauth2 {
 		this.ppo = new Jpo(source, propertiesFile);
 		
 		if(this.ppo.hashConection == jpo.hashConection) {
+			//System.out.println("Misma connecion");
 			this.ppo = jpo;
 			this.onFinalize = false;
 		}
@@ -232,7 +233,7 @@ public class Oauth2 {
 	}
 	
 	public Map<String, Object> checkAccess(String roles, String dinamicToken, String ip_address, String service) throws Exception {
-		
+
 		Map<String, Object> dToken;
 		
 		if(service == null) {
@@ -256,7 +257,7 @@ public class Oauth2 {
 			}
 			
 		}
-		
+
 		ppo.commitear();
 		if(this.onFinalize) {
 			ppo.finalizar();
@@ -442,7 +443,8 @@ public class Oauth2 {
         		String usuario_id = (String) dToken.get("usuario_id");
         		
         		Tabla tServiceRol = ppo.tabla("seg.usuario_rol USR (NOLOCK) INNER JOIN seg.rol_servicio SRL (NOLOCK) ON SRL.rol_id = USR.rol_id INNER JOIN seg.servicio SER (NOLOCK) ON SER.servicio_id = SRL.servicio_id");
-        		tServiceRol.donde("USR.usuario_id = '"+usuario_id+"'");
+        		//tServiceRol.donde("USR.usuario_id = (SELECT usuario_id from seg.usuario WHERE id = '"+usuario_id+"')");
+        		tServiceRol.donde("USR.usuario_id = IIF(ISNUMERIC('"+usuario_id+"') = 1, '"+usuario_id+"', '0')");
                 
                 List<Object> lServicesRol = (List<Object>) tServiceRol.seleccionar("SER.servicio_id, SER.nombre");
 
