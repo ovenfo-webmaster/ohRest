@@ -7,20 +7,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -54,11 +47,11 @@ import ohSolutions.ohRest.util.bean.SendGridResponse;
 public class MailUtil {
 
 	final static Logger logger = LogManager.getLogger(MailUtil.class);
-	
+	/*
 	private final static String jpoMailHost = "jpo.mail.host";
 	private final static String jpoMailPort = "jpo.mail.port";
 	private final static String jpoMailUserName = "jpo.mail.username";
-	private final static String jpoMailPassword = "jpo.mail.password";
+	private final static String jpoMailPassword = "jpo.mail.password";*/
 	private final static String jpoMailAttImg = "jpo.mail.attachment.img";
 	private final static String jpoMailAttName = "jpo.mail.attachment.name";
 	private final static String jpoMailAttId = "jpo.mail.attachment.id";
@@ -213,7 +206,27 @@ public class MailUtil {
 		sendData.setAttachments(config.getAttachments());
 		sendData.setSendgridApiKey(mail.has("sendgrid_api_key") ? mail.getString("sendgrid_api_key") : null);
 		
-		String msg_id = sendGrid(sendData);
+
+		sendData.setMail_smtp_host(mail.has("mail_smtp_host") ? mail.getString("mail_smtp_host") : null);
+		sendData.setMail_smtp_port(mail.has("mail_smtp_port") ? mail.getString("mail_smtp_port") : null);
+		sendData.setMail_smtp_username(mail.has("mail_smtp_username") ? mail.getString("mail_smtp_username") : null);
+		sendData.setMail_smtp_password(mail.has("mail_smtp_password") ? mail.getString("mail_smtp_password") : null);
+		sendData.setEnable_ssl(mail.has("enable_ssl") ? mail.getString("enable_ssl") : null);
+
+		System.out.println("testing 2.5 ------------");
+		
+		
+		String msg_id = null;
+		
+		if(sendData.getMail_smtp_host() != null) {
+
+			msg_id = sendSMTP(sendData);
+			
+			
+		} else {
+
+			msg_id = sendGrid(sendData);
+		}
 		
 		return new SendGridResponse(id, msg_id);
 		
@@ -424,44 +437,71 @@ public class MailUtil {
 	    
 	}
 
-	public static boolean sendSMTP(String from, String to, String copy, String hidenCopy, String subject, String body) throws Exception {
+	public static String sendSMTP(SendGridData sendData) throws Exception {
 
-		final String host = JpoUtil.getPropertie(jpoMailHost);
-		final String port = JpoUtil.getPropertie(jpoMailPort);
-		final String username = JpoUtil.getPropertie(jpoMailUserName);
-		final String password = JpoUtil.getPropertie(jpoMailPassword);
+		final String host = sendData.getMail_smtp_host();
+		final String port = sendData.getMail_smtp_port();
+		final String username = sendData.getMail_smtp_username();
+		final String password = sendData.getMail_smtp_password();
+		/*
 		final String attachmentimg = JpoUtil.getPropertie(jpoMailAttImg);
 		final String attachmentname = JpoUtil.getPropertie(jpoMailAttName);
 		final String attachmentid = JpoUtil.getPropertie(jpoMailAttId);
+		
+		*/
+		String from = sendData.getFrom();
+		String to = sendData.getTo();
+		String copy = sendData.getCopy();
+		String hidenCopy = sendData.getHidenCopy();
+		String subject = sendData.getSubject();
+		String body = sendData.getBody();
+		
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", host);
+        properties.put("mail.smtp.port", port);
+        properties.put("mail.smtp.auth", "true");
+        
+        if(sendData.getEnable_ssl().equals("1")) {
+            properties.put("mail.smtp.starttls.enable", "true"); //TL
+        }
+		
+        Session session = Session.getInstance(properties, new javax.mail.Authenticator() {
+	        protected PasswordAuthentication getPasswordAuthentication() {
+	            return new PasswordAuthentication(username, password);
+	        }
+        });
 
-		Properties properties = new Properties();
-		properties.put("mail.smtp.auth", "true");
-		properties.put("mail.smtp.starttls.enable", "true");
-		properties.setProperty("mail.smtp.host", host);
-		properties.setProperty("mail.smtp.port", port);
+        try {
 
-		// Get the default Session object.
-		Session session = Session.getDefaultInstance(properties, new javax.mail.Authenticator() {
-			protected PasswordAuthentication getPasswordAuthentication() {
-				return new PasswordAuthentication(username, password);
-			}
-		});
-
-		try {
-
-			MimeMessage message = new MimeMessage(session);
-			message.setFrom(new InternetAddress(from));
-			message.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
-			message.addRecipient(Message.RecipientType.CC, new InternetAddress(copy));
-			message.addRecipient(Message.RecipientType.BCC, new InternetAddress(hidenCopy));
-			message.setSubject(subject);
-
-			// Create a multipar message
-			Multipart multipart = new MimeMultipart();
-
-			// Part two is attachment
-			BodyPart messageBodyPart = new MimeBodyPart();
-
+            Message message = new MimeMessage(session);
+	            
+	            message.setFrom(new InternetAddress(from));
+	            
+				if(to != null && to.length() > 0) {
+					String[] _tos = to.split(";");
+					for(int i = 0; i < _tos.length; i++) {
+						message.addRecipient(Message.RecipientType.TO, new InternetAddress(_tos[i]));
+					}
+				}
+				if(copy != null && copy.length() > 0) {
+					String[] _copys = copy.split(";");
+					for(int i = 0; i < _copys.length; i++) {
+						message.addRecipient(Message.RecipientType.CC, new InternetAddress(_copys[i]));
+					}
+				}
+				
+				if(hidenCopy != null && hidenCopy.length() > 0) {
+					String[] _hidenCopys = hidenCopy.split(";");
+					for(int i = 0; i < _hidenCopys.length; i++) {
+						message.addRecipient(Message.RecipientType.BCC, new InternetAddress(_hidenCopys[i]));
+					}
+				}
+	            
+	            message.setSubject(subject);
+	            message.setContent(body, "text/html; charset=utf-8");
+	            
+	            /*
+	             * 
 			// has attachment image
 			DataSource source = new FileDataSource(attachmentimg);
 			messageBodyPart.setDataHandler(new DataHandler(source));
@@ -469,22 +509,18 @@ public class MailUtil {
 			messageBodyPart.setFileName(attachmentname);
 			multipart.addBodyPart(messageBodyPart);
 
-			// has body
-			messageBodyPart = new MimeBodyPart();
-			messageBodyPart.setContent(body, "text/html; charset=utf-8");
+	             * */
+	
+            Transport.send(message);
 
-			multipart.addBodyPart(messageBodyPart);
+            System.out.println("Done");
 
-			message.setContent(multipart);
-
-			Transport.send(message);
-
-		} catch (MessagingException e) {
-	    	logger.error(e.getMessage(), e);
+        } catch (MessagingException e) {
+            e.printStackTrace();
 			throw new Exception("ohSolutions.Rest - Error sending email by SMTP");
-		}
-
-		return true;
+        }
+        
+		return "1";
 
 	}
 

@@ -21,6 +21,13 @@ public class SendGridData {
 	private String attachmentId;
 	private List<Attachments> attachments;
 	private String sendgridApiKey;
+
+	private String mail_smtp_host;
+	private String mail_smtp_port;
+	private String mail_smtp_username;
+	private String mail_smtp_password;
+	
+	private String enable_ssl;
 	
 	public String getId() {
 		return id;
@@ -112,5 +119,35 @@ public class SendGridData {
 	public void setSendgridApiKey(String sendgridApiKey) {
 		this.sendgridApiKey = sendgridApiKey;
 	}
-		
+	public String getMail_smtp_host() {
+		return mail_smtp_host;
+	}
+	public void setMail_smtp_host(String mail_smtp_host) {
+		this.mail_smtp_host = mail_smtp_host;
+	}
+	public String getMail_smtp_port() {
+		return mail_smtp_port;
+	}
+	public void setMail_smtp_port(String mail_smtp_port) {
+		this.mail_smtp_port = mail_smtp_port;
+	}
+	public String getMail_smtp_username() {
+		return mail_smtp_username;
+	}
+	public void setMail_smtp_username(String mail_smtp_username) {
+		this.mail_smtp_username = mail_smtp_username;
+	}
+	public String getMail_smtp_password() {
+		return mail_smtp_password;
+	}
+	public void setMail_smtp_password(String mail_smtp_password) {
+		this.mail_smtp_password = mail_smtp_password;
+	}
+	public String getEnable_ssl() {
+		return enable_ssl;
+	}
+	public void setEnable_ssl(String enable_ssl) {
+		this.enable_ssl = enable_ssl;
+	}
+	
 }
