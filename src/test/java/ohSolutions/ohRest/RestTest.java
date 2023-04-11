@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
- 
 import ohSolutions.ohJpo.dao.Jpo;
 import ohSolutions.ohJpo.dao.Procedure;
 import ohSolutions.ohJpo.dao.Tabla;
@@ -50,7 +48,8 @@ public class RestTest {
 	*/
 	
 	//@Test
-    public void sendgridSincrono() throws Exception {
+    @SuppressWarnings("unchecked")
+	public void sendgridSincrono() throws Exception {
     	
     	Jpo miJpo = new Jpo();
     	
@@ -73,7 +72,8 @@ public class RestTest {
     }
 	
 	//@Test
-    public void sendgridSincronoLlamada() throws Exception {
+    @SuppressWarnings("unchecked")
+	public void sendgridSincronoLlamada() throws Exception {
     	
     	Jpo miJpo = new Jpo();
     	
